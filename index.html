@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Demo: KPIT Aftersales OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .main-nav-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .main-nav-btn.active {
+            background-color: #0c4a6e; /* sky-900 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .main-tab-content {
+            display: none;
+        }
+        .main-tab-content.active {
+            display: block;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .markdown-content p, .report-content p { margin-bottom: 1rem; line-height: 1.6; }
+        .markdown-content ol, .report-content ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-content ul, .report-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-content h3, .report-content h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;}
+        .report-content h1 { font-size: 2.25rem; font-weight: 700; margin-bottom: 1rem; }
+        .report-content h2 { font-size: 1.875rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; color: #1e3a8a; }
+        .report-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        .report-content th, .report-content td { border: 1px solid #cbd5e1; padding: 0.75rem; text-align: left; }
+        .report-content th { background-color: #f1f5f9; }
+        .report-content blockquote { border-left: 4px solid #64748b; padding-left: 1rem; margin-left: 0; font-style: italic; color: #475569; }
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+        .chat-bubble-user { background-color: #3b82f6; color: white; }
+        .chat-bubble-ai { background-color: #e5e7eb; color: #1f2937; }
+        .sortable:hover { cursor: pointer; background-color: #f1f5f9; }
+        .sortable .sort-icon { display: none; }
+        .sortable:hover .sort-icon { display: inline-block; }
+        .sub-nav-btn { transition: all 0.2s ease-in-out; border-bottom: 2px solid transparent; }
+        .sub-nav-btn.active { color: #0ea5e9; border-bottom-color: #0ea5e9; }
+        .sub-tab-content { display: none; }
+        .sub-tab-content.active { display: block; }
+        .modal-backdrop { transition: opacity 0.3s ease-in-out; }
+        .modal-content-diag { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-md w-full p-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <svg class="w-8 h-8 text-sky-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+                <h1 class="text-2xl font-bold text-slate-800">Aftersales OS</h1>
+            </div>
+            <div class="text-sm text-slate-500">Live Demo & Strategy Environment</div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex-grow flex flex-col md:flex-row overflow-hidden">
+            <!-- Navigation Sidebar -->
+            <nav id="main-navigation" class="w-full md:w-64 bg-white p-4 space-y-2 border-r border-slate-200 shrink-0">
+                <!-- Navigation buttons will be injected here by JS -->
+            </nav>
+
+            <!-- Content Area -->
+            <main class="flex-grow p-4 md:p-8 bg-slate-50 overflow-y-auto">
+                <div id="diagnostic-copilot-content" class="main-tab-content"></div>
+                <div id="predictive-inventory-content" class="main-tab-content"></div>
+                <div id="ai-warranty-adjudication-content" class="main-tab-content"></div>
+                <div id="proactive-retention-content" class="main-tab-content"></div>
+                <div id="dynamic-knowledge-base-content" class="main-tab-content"></div>
+                <div id="strategic-report-content" class="main-tab-content"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Generic Modal for Simulators -->
+    <div id="simulation-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-60 z-40 hidden modal-backdrop"></div>
+    <div id="simulation-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div id="simulation-modal-content" class="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto transform scale-95 opacity-0 modal-content-diag">
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navContainer = document.getElementById('main-navigation');
+
+            const useCases = [
+                { id: 'diagnostic-copilot', name: 'Diagnostic Co-Pilot', icon: '🩺' },
+                { id: 'predictive-inventory', name: 'Predictive Inventory', icon: '📦' },
+                { id: 'ai-warranty-adjudication', name: 'AI Warranty Adjudication', icon: '⚖️' },
+                { id: 'proactive-retention', name: 'Proactive Retention', icon: '💬' },
+                { id: 'dynamic-knowledge-base', name: 'Dynamic Knowledge Base', icon: '📚' },
+                { id: 'strategic-report', name: 'Strategic Report', icon: '📄' }
+            ];
+
+            // --- RENDER NAVIGATION & TABS ---
+            useCases.forEach(useCase => {
+                const btn = document.createElement('button');
+                btn.className = 'main-nav-btn w-full flex items-center space-x-3 p-3 rounded-lg text-left text-slate-600 font-medium hover:bg-slate-100';
+                btn.dataset.tab = useCase.id;
+                btn.innerHTML = `<span>${useCase.icon}</span><span>${useCase.name}</span>`;
+                navContainer.appendChild(btn);
+            });
+
+            // --- TAB SWITCHING LOGIC ---
+            navContainer.addEventListener('click', e => {
+                const button = e.target.closest('.main-nav-btn');
+                if (!button) return;
+
+                const tabId = button.dataset.tab;
+                
+                document.querySelectorAll('.main-nav-btn').forEach(b => b.classList.remove('active'));
+                button.classList.add('active');
+
+                document.querySelectorAll('.main-tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tabId}-content`).classList.add('active');
+            });
+
+            // --- RENDER INITIAL CONTENT ---
+            function initializeDemos() {
+                document.getElementById('diagnostic-copilot-content').innerHTML = getDiagnosticCopilotHTML();
+                document.getElementById('predictive-inventory-content').innerHTML = getPredictiveInventoryHTML();
+                document.getElementById('ai-warranty-adjudication-content').innerHTML = getAIWarrantyHTML();
+                document.getElementById('proactive-retention-content').innerHTML = getProactiveRetentionHTML();
+                document.getElementById('dynamic-knowledge-base-content').innerHTML = getKnowledgeBaseHTML();
+                document.getElementById('strategic-report-content').innerHTML = getStrategicReportHTML();
+                
+                attachDiagnosticCopilotListeners();
+                attachPredictiveInventoryListeners();
+                attachAIWarrantyListeners();
+                attachProactiveRetentionListeners();
+                attachKnowledgeBaseListeners();
+                
+                // Activate the first tab by default
+                document.querySelector('.main-nav-btn').click();
+            }
+
+            // --- GEMINI API CALL HELPER ---
+            async function callGemini(prompt, isJson = false) {
+                const apiKey = ""; // Leave empty
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }]
+                };
+
+                if (isJson) {
+                    payload.generationConfig = {
+                        responseMimeType: "application/json",
+                    };
+                }
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        throw new Error(`API call failed with status: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        console.error("Unexpected API response structure:", result);
+                        return "Error: Could not parse Gemini response.";
+                    }
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    return `Error: ${error.message}`;
+                }
+            }
+
+            // --- SIMULATION MODAL ---
+            const modalBackdrop = document.getElementById('simulation-modal-backdrop');
+            const modal = document.getElementById('simulation-modal');
+            const modalContent = document.getElementById('simulation-modal-content');
+
+            function closeSimulationModal() {
+                 modalContent.classList.add('scale-95', 'opacity-0');
+                 modalBackdrop.style.opacity = '0';
+                 setTimeout(() => {
+                    modalBackdrop.classList.add('hidden');
+                    modal.classList.add('hidden');
+                 }, 300);
+            }
+
+            async function openSimulationModal(prompt, isJsonReport = false) {
+                modalBackdrop.classList.remove('hidden');
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modalContent.classList.remove('scale-95', 'opacity-0');
+                    modalBackdrop.style.opacity = '1';
+                }, 10);
+                
+                modalContent.innerHTML = `<div class="p-6 flex justify-center items-center"><div class="loader"></div></div>`;
+                
+                const responseText = await callGemini(prompt, isJsonReport);
+
+                let contentHTML = '';
+                try {
+                    if (isJsonReport) {
+                        const response = JSON.parse(responseText);
+                        contentHTML = `
+                            <div class="p-6">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="font-bold text-lg">${response.title || 'AI Report'}</h3>
+                                    <button id="close-sim-modal-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+                                </div>
+                                <div class="mt-4 text-sm space-y-2">
+                                    <p class="font-semibold">Executive Summary:</p>
+                                    <p>${response.executiveSummary}</p>
+                                    <p class="font-semibold mt-4">Failure Analysis:</p>
+                                    <p>${response.failureAnalysis}</p>
+                                    <p class="font-semibold mt-4">Recommendation:</p>
+                                    <p>${response.recommendation}</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        const response = JSON.parse(responseText);
+                        contentHTML = `
+                             <div class="p-6">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="font-bold text-lg">Digital Twin Simulation</h3>
+                                    <button id="close-sim-modal-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+                                </div>
+                                <div class="mt-4 text-sm space-y-2">
+                                    <p class="font-semibold">Predicted Outcome: <span class="font-normal px-2 py-1 rounded-full ${response.predictedOutcome === 'Pass' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${response.predictedOutcome}</span></p>
+                                    <p class="font-semibold mt-2">Reasoning:</p>
+                                    <p>${response.simulationReason}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch(e) {
+                     contentHTML = `<div class="p-6"><p class="text-red-500">Error parsing AI response.</p><button id="close-sim-modal-btn" class="absolute top-2 right-4 text-slate-500 hover:text-slate-800 text-2xl">&times;</button></div>`;
+                }
+                modalContent.innerHTML = contentHTML;
+            }
+            
+            modalBackdrop.addEventListener('click', closeSimulationModal);
+            modal.addEventListener('click', e => {
+                if(e.target.id === 'close-sim-modal-btn') {
+                    closeSimulationModal();
+                }
+            });
+            
+            // --- DEMO 1: DIAGNOSTIC CO-PILOT ---
+            function getDiagnosticCopilotHTML() {
+                return `
+                    <h2 class="text-2xl font-bold mb-4">Diagnostic Co-Pilot</h2>
+                    <div id="diag-wizard" class="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
+                        <!-- Step 1: Initial Input -->
+                        <div id="diag-step-1" class="wizard-step active">
+                            <h3 class="text-lg font-semibold mb-4">Step 1: Report Symptoms</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <select id="diag-vehicle" class="p-2 border rounded w-full"><option>2022 Ford F-150 3.5L</option><option>2021 Toyota RAV4 Hybrid</option></select>
+                                <select id="diag-symptom" class="p-2 border rounded w-full"><option>Rough Idle & Misfire</option><option>Vehicle Hesitates on Acceleration</option><option>A/C Blows Warm Air</option></select>
+                            </div>
+                            <button id="run-diagnosis" class="w-full bg-sky-600 text-white p-2 rounded hover:bg-sky-700 font-semibold">Start Diagnosis</button>
+                        </div>
+                        <!-- Step 2: AI Analysis & Guided Tests -->
+                        <div id="diag-step-2" class="wizard-step">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold">Diagnostic Flow</h3>
+                                <button id="reset-diag" class="text-sm text-slate-500 hover:text-sky-600 hover:underline">Start New Diagnosis</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div id="diag-flow-container" class="space-y-4 md:col-span-2"></div>
+                                <div id="diag-telemetry-panel" class="md:col-span-1 bg-gray-800 text-white p-4 rounded-lg font-mono text-xs space-y-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            function attachDiagnosticCopilotListeners() {
+                const diagWizard = document.getElementById('diag-wizard');
+                let diagContext = {};
+
+                function updateTelemetry(rpm, coolant, fuelTrim) {
+                    const panel = document.getElementById('diag-telemetry-panel');
+                    if (!panel) return;
+                    panel.innerHTML = `
+                        <p class="text-green-400">> LIVE TELEMETRY</p>
+                        <p>RPM: <span class="text-white">${rpm}</span></p>
+                        <p>COOLANT: <span class="text-white">${coolant}°F</span></p>
+                        <p>FUEL TRIM B1: <span class="text-white">${fuelTrim}%</span></p>
+                    `;
+                }
+
+                async function handleDiagnosticStep(previousTest, result) {
+                    const flowContainer = document.getElementById('diag-flow-container');
+                    const loaderDiv = document.createElement('div');
+                    loaderDiv.className = 'flex justify-center items-center p-4';
+                    loaderDiv.innerHTML = '<div class="loader"></div>';
+                    flowContainer.appendChild(loaderDiv);
+
+                    diagContext.history.push({ test: previousTest, result });
+
+                    const prompt = `Act as an expert AI automotive diagnostic assistant.
+                    Context:
+                    - Vehicle: ${diagContext.vehicle}
+                    - Initial Symptom: ${diagContext.symptom}
+                    - Diagnostic History: ${JSON.stringify(diagContext.history)}
+                    
+                    Based on this, provide the next step as a JSON object with:
+                    1. 'nextStepType' (either 'test' or 'conclusion').
+                    2. If 'test', provide 'nextTest' (a string for the test).
+                    3. If 'conclusion', provide 'fix' (a string describing the repair) and 'partNumber' (a string for the part).
+                    4. 'reasoning' (a brief explanation of why this is the next step).`;
+
+                    const responseText = await callGemini(prompt, true);
+                    loaderDiv.remove();
+
+                    try {
+                        const response = JSON.parse(responseText);
+                        renderNextStep(response);
+                    } catch (e) {
+                        flowContainer.innerHTML += `<p class="text-red-500">Error processing AI response. Please try again.</p>`;
+                    }
+                }
+
+                function renderNextStep(stepData) {
+                    const flowContainer = document.getElementById('diag-flow-container');
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = 'space-y-4';
+
+                    if (stepData.nextStepType === 'test') {
+                        stepDiv.innerHTML = `
+                            <div class="bg-sky-50 border-l-4 border-sky-500 p-4 rounded-r-lg">
+                                <h4 class="font-bold text-sky-800">AI Reasoning</h4>
+                                <p class="text-sky-700 mt-1 text-sm">${stepData.reasoning}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold mb-2">Next Recommended Test:</h4>
+                                <div class="border p-4 rounded-lg shadow-sm">
+                                    <p>${stepData.nextTest}</p>
+                                    <div class="mt-4 flex gap-2">
+                                        <button class="diag-step-btn flex-1 bg-green-500 text-white p-2 rounded hover:bg-green-600" data-result="Pass" data-test="${stepData.nextTest}">Pass</button>
+                                        <button class="diag-step-btn flex-1 bg-red-500 text-white p-2 rounded hover:bg-red-600" data-result="Fail" data-test="${stepData.nextTest}">Fail</button>
+                                        <button class="diag-simulate-btn flex-none bg-gray-500 text-white p-2 rounded hover:bg-gray-600" data-test="${stepData.nextTest}">Simulate</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (stepData.nextStepType === 'conclusion') {
+                        stepDiv.innerHTML = `
+                            <div class="bg-green-100 border-l-4 border-green-500 p-4 rounded-r-lg">
+                                <h4 class="font-bold text-green-800">Conclusion: Root Cause Identified</h4>
+                                <p class="text-green-700 mt-1 text-sm">${stepData.reasoning}</p>
+                            </div>
+                            <div class="border p-4 rounded-lg shadow-sm bg-white">
+                                <h4 class="font-semibold">Recommended Fix:</h4>
+                                <p class="text-lg">${stepData.fix}</p>
+                                <p class="text-sm text-slate-500 mt-2">Required Part: <span class="font-mono font-bold text-slate-700">${stepData.partNumber}</span></p>
+                            </div>
+                        `;
+                    }
+                    flowContainer.appendChild(document.createElement('hr'));
+                    flowContainer.appendChild(stepDiv);
+                }
+
+                diagWizard.addEventListener('click', async e => {
+                    if (e.target.id === 'run-diagnosis') {
+                        diagContext = {
+                            vehicle: document.getElementById('diag-vehicle').value,
+                            symptom: document.getElementById('diag-symptom').value,
+                            history: []
+                        };
+                        const flowContainer = document.getElementById('diag-flow-container');
+                        
+                        document.getElementById('diag-step-1').classList.remove('active');
+                        document.getElementById('diag-step-2').classList.add('active');
+                        flowContainer.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
+                        updateTelemetry(750, 195, '+2.5');
+
+                        const prompt = `Act as an expert AI automotive diagnostic assistant for a technician working on a ${diagContext.vehicle} with symptom: "${diagContext.symptom}". Provide a JSON object with: 1. 'dtc' (a likely OBD-II code), 2. 'initialAnalysis' (a brief summary), 3. 'potentialCauses' (an array of strings), 4. 'recommendedTest' (a string for the first test to perform).`;
+                        
+                        const responseText = await callGemini(prompt, true);
+                        try {
+                            const response = JSON.parse(responseText);
+                            flowContainer.innerHTML = `
+                                <div class="bg-slate-100 p-4 rounded-lg">
+                                    <p class="text-sm text-slate-500">Symptom & Vehicle</p>
+                                    <p class="font-semibold">${diagContext.symptom} on ${diagContext.vehicle}</p>
+                                    <p class="mt-2 text-sm text-slate-500">Likely DTC</p>
+                                    <p class="font-semibold font-mono">${response.dtc || 'P0301'}</p>
+                                </div>
+                                <div class="bg-sky-50 border-l-4 border-sky-500 p-4 rounded-r-lg">
+                                    <h4 class="font-bold text-sky-800">AI Initial Analysis</h4>
+                                    <p class="text-sky-700 mt-1">${response.initialAnalysis || 'Analysis failed.'}</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-2">Potential Causes:</h4>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${(response.potentialCauses || []).map(cause => `<span class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm">${cause}</span>`).join('')}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-2">Recommended First Test:</h4>
+                                    <div class="border p-4 rounded-lg shadow-sm">
+                                        <p>${response.recommendedTest || 'No test recommended.'}</p>
+                                        <div class="mt-4 flex gap-2">
+                                            <button class="diag-step-btn flex-1 bg-green-500 text-white p-2 rounded hover:bg-green-600" data-result="Pass" data-test="${response.recommendedTest}">Pass</button>
+                                            <button class="diag-step-btn flex-1 bg-red-500 text-white p-2 rounded hover:bg-red-600" data-result="Fail" data-test="${response.recommendedTest}">Fail</button>
+                                            <button class="diag-simulate-btn flex-none bg-gray-500 text-white p-2 rounded hover:bg-gray-600" data-test="${response.recommendedTest}">Simulate</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } catch(err) {
+                            flowContainer.innerHTML = `<p class="text-red-500">Error processing AI response. Please try again.</p>`;
+                        }
+                    } else if (e.target.matches('.diag-step-btn')) {
+                        const test = e.target.dataset.test;
+                        const result = e.target.dataset.result;
+                        e.target.parentElement.innerHTML = `<p class="font-semibold text-center text-slate-500">Result: ${result}</p>`;
+                        handleDiagnosticStep(test, result);
+                    } else if (e.target.matches('.diag-simulate-btn')) {
+                        const test = e.target.dataset.test;
+                        const prompt = `Act as a digital twin simulator. A technician is about to perform the test: "${test}". Predict the most likely outcome ("Pass" or "Fail") and provide a brief technical reason for the prediction. Return a JSON object with 'predictedOutcome' and 'simulationReason'.`;
+                        openSimulationModal(prompt, true);
+                    } else if (e.target.id === 'reset-diag') {
+                        document.getElementById('diag-step-2').classList.remove('active');
+                        document.getElementById('diag-step-1').classList.add('active');
+                        document.getElementById('diag-flow-container').innerHTML = '';
+                        document.getElementById('diag-telemetry-panel').innerHTML = '';
+                    }
+                });
+            }
+
+            // --- DEMO 2: PREDICTIVE INVENTORY ---
+            function getPredictiveInventoryHTML() {
+                return `
+                    <h2 class="text-2xl font-bold mb-4">Predictive Inventory Command Center</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                        <!-- Left Panel: Part Analysis -->
+                        <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow-lg">
+                            <h3 class="text-xl font-bold mb-4">Part Analysis</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="md:col-span-1">
+                                    <h4 class="font-semibold mb-2">Parts List</h4>
+                                    <div id="parts-list" class="space-y-2">
+                                        <button class="part-item w-full text-left p-2 rounded bg-slate-100 border-l-4 border-sky-500" data-part-id="FL820S">FL-820S Oil Filter</button>
+                                        <button class="part-item w-full text-left p-2 rounded hover:bg-slate-100" data-part-id="SP546">SP-546 Spark Plug</button>
+                                        <button class="part-item w-full text-left p-2 rounded hover:bg-slate-100" data-part-id="BRCF1">BR-CF1 Cabin Filter</button>
+                                    </div>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <h4 id="part-name" class="text-lg font-bold">FL-820S Oil Filter</h4>
+                                    <div class="mt-4 grid grid-cols-2 gap-4">
+                                        <div class="bg-slate-100 p-4 rounded-lg">
+                                            <p class="text-sm text-slate-500">Current Stock</p>
+                                            <div class="flex items-center gap-2">
+                                                <p id="part-stock" class="text-2xl font-bold">152</p>
+                                                <div class="w-full bg-gray-200 rounded-full h-2.5"><div id="stock-bar" class="bg-green-600 h-2.5 rounded-full" style="width: 75%"></div></div>
+                                            </div>
+                                        </div>
+                                        <div class="bg-slate-100 p-4 rounded-lg text-center">
+                                            <p class="text-sm text-slate-500">Avg. Monthly Sales</p>
+                                            <p id="part-sales" class="text-2xl font-bold">165</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 h-40">
+                                        <canvas id="sales-chart"></canvas>
+                                    </div>
+                                    <button id="forecast-demand" class="mt-4 w-full bg-sky-600 text-white p-2 rounded hover:bg-sky-700 font-semibold">Forecast Demand (AI)</button>
+                                    <div id="forecast-result" class="mt-4 p-4 rounded-lg bg-sky-50 border border-sky-200 hidden"></div>
+                                    <div id="po-section" class="mt-4 hidden"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Right Panel: Network Insights -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="bg-white p-4 rounded-lg shadow-lg">
+                                <h3 class="font-bold mb-2">Regional Demand Heatmap</h3>
+                                <div id="demand-map" class="grid grid-cols-2 gap-2 text-white text-xs text-center">
+                                    <div class="p-4 rounded bg-green-500">North-West</div>
+                                    <div class="p-4 rounded bg-red-600">North-East</div>
+                                    <div class="p-4 rounded bg-green-600">South-West</div>
+                                    <div class="p-4 rounded bg-yellow-500">South-East</div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-lg">
+                                <h3 class="font-bold mb-2">Supplier Performance</h3>
+                                <table class="w-full text-sm">
+                                    <thead><tr class="text-left text-slate-500">
+                                        <th class="p-2 sortable" data-sort="name">Supplier <span class="sort-icon">↕️</span></th>
+                                        <th class="p-2 sortable" data-sort="fill">Fill % <span class="sort-icon">↕️</span></th>
+                                        <th class="p-2 sortable" data-sort="lead">Lead (d) <span class="sort-icon">↕️</span></th>
+                                    </tr></thead>
+                                    <tbody id="supplier-table"></tbody>
+                                </table>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-lg">
+                                <h3 class="font-bold mb-2 text-yellow-600">At-Risk Inventory</h3>
+                                <div id="at-risk-inventory"></div>
+                            </div>
+                            <div id="supply-chain-alert" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-r-lg shadow-lg">
+                                <p class="font-bold">Supply Chain Disruption Alert!</p>
+                                <p class="text-sm">Typhoon in South-East Asia may delay shipments from 'Global Spares'. AI recommends placing a contingency order with 'AutoParts Co' for critical parts.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            let salesChart;
+            function attachPredictiveInventoryListeners() {
+                const partsData = {
+                    FL820S: { name: 'FL-820S Oil Filter', stock: 152, maxStock: 200, sales: 165, history: [150, 160, 175, 155, 180, 170], demand: { 'northwest': 'low', 'northeast': 'high', 'southwest': 'low', 'southeast': 'medium' } },
+                    SP546: { name: 'SP-546 Spark Plug', stock: 96, maxStock: 150, sales: 70, history: [65, 72, 68, 75, 70, 71], demand: { 'northwest': 'medium', 'northeast': 'medium', 'southwest': 'high', 'southeast': 'low' } },
+                    BRCF1: { name: 'BR-CF1 Cabin Filter', stock: 18, maxStock: 75, sales: 45, history: [40, 55, 42, 38, 50, 48], demand: { 'northwest': 'high', 'northeast': 'high', 'southwest': 'medium', 'southeast': 'medium' } }
+                };
+                let suppliers = [
+                    { name: 'AutoParts Co', fill: 98.5, lead: 2 },
+                    { name: 'Global Spares', fill: 95.2, lead: 4 },
+                    { name: 'OEM Direct', fill: 99.8, lead: 7 }
+                ];
+                const atRiskParts = [
+                    { id: 'XW-4333', name: 'Wiper Motor \'18', reason: 'No sales in 180+ days' },
+                    { id: '5L8Z-8501', name: 'Water Pump \'05', reason: 'Superseded by new part' }
+                ];
+
+                function renderSuppliers() {
+                    const tableBody = document.getElementById('supplier-table');
+                    tableBody.innerHTML = suppliers.map(s => `
+                        <tr class="border-t">
+                            <td class="p-2 font-medium">${s.name}</td>
+                            <td class="p-2">${s.fill}%</td>
+                            <td class="p-2">${s.lead}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                function renderAtRisk() {
+                    const container = document.getElementById('at-risk-inventory');
+                    container.innerHTML = atRiskParts.map(p => `
+                        <div class="text-sm border-t first:border-t-0 py-2">
+                            <p class="font-semibold">${p.name}</p>
+                            <div class="flex justify-between items-center">
+                                <p class="text-slate-500">${p.reason}</p>
+                                <button class="ai-recommend-risk-btn text-xs bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600" data-part-name="${p.name}">AI Recommend</button>
+                            </div>
+                            <div class="risk-recommendation-output text-xs mt-2 p-2 bg-yellow-50 border-yellow-200 border rounded-md hidden"></div>
+                        </div>
+                    `).join('');
+                }
+
+                function updatePartView(partId) {
+                    const part = partsData[partId];
+                    document.getElementById('part-name').innerText = part.name;
+                    document.getElementById('part-stock').innerText = part.stock;
+                    document.getElementById('part-sales').innerText = part.sales;
+                    
+                    const stockBar = document.getElementById('stock-bar');
+                    const stockPercent = (part.stock / part.maxStock) * 100;
+                    stockBar.style.width = `${stockPercent}%`;
+                    stockBar.classList.remove('bg-green-600', 'bg-yellow-500', 'bg-red-600');
+                    if (stockPercent > 50) stockBar.classList.add('bg-green-600');
+                    else if (stockPercent > 25) stockBar.classList.add('bg-yellow-500');
+                    else stockBar.classList.add('bg-red-600');
+
+                    const mapDivs = document.querySelectorAll('#demand-map > div');
+                    mapDivs.forEach(div => {
+                        const region = div.innerText.replace('-', '').toLowerCase();
+                        div.className = 'p-4 rounded text-white text-xs text-center ';
+                        switch(part.demand[region]) {
+                            case 'high': div.classList.add('bg-red-600'); break;
+                            case 'medium': div.classList.add('bg-yellow-500'); break;
+                            case 'low': div.classList.add('bg-green-600'); break;
+                        }
+                    });
+
+                    document.getElementById('forecast-result').classList.add('hidden');
+                    document.getElementById('po-section').classList.add('hidden');
+                    updateChart(partId);
+                }
+
+                function updateChart(partId) {
+                    const ctx = document.getElementById('sales-chart').getContext('2d');
+                    if (salesChart) salesChart.destroy();
+                    salesChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                            datasets: [{
+                                label: 'Sales Last 6 Months',
+                                data: partsData[partId].history,
+                                borderColor: '#0ea5e9',
+                                tension: 0.1
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                    });
+                }
+
+                document.querySelectorAll('.part-item').forEach(btn => {
+                    btn.addEventListener('click', e => {
+                        const partId = e.currentTarget.dataset.partId;
+                        document.querySelectorAll('.part-item').forEach(b => b.classList.remove('bg-slate-100', 'border-l-4', 'border-sky-500'));
+                        e.currentTarget.classList.add('bg-slate-100', 'border-l-4', 'border-sky-500');
+                        updatePartView(partId);
+                    });
+                });
+
+                document.getElementById('forecast-demand').addEventListener('click', async () => {
+                    const activePartId = document.querySelector('.part-item.border-sky-500').dataset.partId;
+                    const part = partsData[activePartId];
+                    const resultDiv = document.getElementById('forecast-result');
+                    const poSection = document.getElementById('po-section');
+                    poSection.classList.add('hidden');
+                    resultDiv.classList.remove('hidden');
+                    resultDiv.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
+                    
+                    const prompt = `Act as an AI inventory demand forecaster. For a part named "${part.name}" with current stock of ${part.stock} and historical monthly sales of ${part.history.join(', ')}, provide a JSON object with 'forecast' (a number for the 30-day demand) and 'recommendation' (a string with a concise reordering suggestion).`;
+                    
+                    const responseText = await callGemini(prompt, true);
+                    try {
+                        const response = JSON.parse(responseText);
+                        resultDiv.innerHTML = `
+                            <div class="flex items-center justify-center gap-4">
+                                <div>
+                                    <p class="text-sm text-slate-500">AI 30-Day Forecast</p>
+                                    <p class="text-2xl font-bold text-sky-700">${response.forecast}</p>
+                                </div>
+                                <div class="border-l pl-4">
+                                    <p class="text-sm text-slate-500">AI Recommendation</p>
+                                    <p class="font-semibold">${response.recommendation}</p>
+                                </div>
+                            </div>
+                        `;
+                        poSection.classList.remove('hidden');
+                        poSection.innerHTML = `<button id="create-po" class="w-full mt-2 bg-green-600 text-white p-2 rounded text-sm hover:bg-green-700" data-part-name="${part.name}" data-qty="${response.forecast}">Create Purchase Order</button>`;
+                    } catch(e) {
+                         resultDiv.innerHTML = `<p class="text-red-500">Error processing AI response. Please try again.</p>`;
+                    }
+                });
+                
+                document.addEventListener('click', e => {
+                    if (e.target.matches('.sortable')) {
+                        const sortBy = e.target.dataset.sort;
+                        suppliers.sort((a, b) => {
+                            if (a[sortBy] < b[sortBy]) return -1;
+                            if (a[sortBy] > b[sortBy]) return 1;
+                            return 0;
+                        });
+                        renderSuppliers();
+                    }
+                    if (e.target.matches('.ai-recommend-risk-btn')) {
+                        const partName = e.target.dataset.partName;
+                        const outputDiv = e.target.parentElement.nextElementSibling;
+                        outputDiv.classList.remove('hidden');
+                        outputDiv.innerHTML = '<div class="loader w-4 h-4"></div>';
+                        const prompt = `For an at-risk automotive part "${partName}", provide a concise, actionable recommendation to mitigate loss. Examples: promotional discount, inter-dealer transfer, supplier buy-back.`;
+                        callGemini(prompt).then(res => {
+                            outputDiv.innerHTML = `<span class="font-bold">AI:</span> ${res}`;
+                        });
+                    }
+                     if (e.target.id === 'create-po') {
+                        const partName = e.target.dataset.partName;
+                        const qty = e.target.dataset.qty;
+                        const bestSupplier = suppliers.sort((a,b) => b.fill - a.fill)[0].name;
+                        const poSection = document.getElementById('po-section');
+                        poSection.innerHTML = `
+                            <div class="border-t pt-4 mt-4">
+                                <h4 class="font-bold text-green-700">PO Created & Sent!</h4>
+                                <p class="text-sm">To: ${bestSupplier}<br>Item: ${partName}<br>Qty: ${qty}</p>
+                            </div>
+                        `;
+                    }
+                });
+
+                updatePartView('FL820S'); // Initial view
+                renderSuppliers();
+                renderAtRisk();
+            }
+            
+            // --- DEMO 3: AI WARRANTY ---
+            function getAIWarrantyHTML() {
+                return `
+                    <h2 class="text-2xl font-bold mb-4">AI Warranty Command Center</h2>
+                    <div class="bg-white p-1 rounded-lg shadow-lg max-w-7xl mx-auto">
+                        <div class="border-b border-slate-200">
+                            <nav id="warranty-sub-nav" class="flex space-x-4 p-4">
+                                <button data-subtab="workbench" class="sub-nav-btn font-semibold text-slate-500 hover:text-sky-600 active">Analyst Workbench</button>
+                                <button data-subtab="dashboard" class="sub-nav-btn font-semibold text-slate-500 hover:text-sky-600">Executive Dashboard</button>
+                                <button data-subtab="dealer" class="sub-nav-btn font-semibold text-slate-500 hover:text-sky-600">Dealer Pre-Check Portal</button>
+                            </nav>
+                        </div>
+                        <div class="p-6">
+                            <!-- Analyst Workbench -->
+                            <div id="workbench-content" class="sub-tab-content active">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div class="md:col-span-1">
+                                        <h3 class="font-bold mb-2">Claims Queue</h3>
+                                        <div id="claims-list" class="space-y-2"></div>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <div id="claim-details-view" class="hidden">
+                                            <h3 id="claim-title" class="text-xl font-bold"></h3>
+                                            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <div id="claim-details" class="text-sm space-y-1 text-slate-600"></div>
+                                                    <button id="analyze-claim" class="mt-4 w-full bg-sky-600 text-white p-2 rounded hover:bg-sky-700 font-semibold">Analyze Claim with AI</button>
+                                                </div>
+                                                <div id="claim-image-container" class="relative"></div>
+                                            </div>
+                                            <div id="claim-analysis-result" class="mt-4 hidden"></div>
+                                        </div>
+                                        <div id="claim-empty-view" class="text-center text-slate-500 pt-16">
+                                            <p>Select a claim to view details.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Executive Dashboard -->
+                            <div id="dashboard-content" class="sub-tab-content">
+                                <h3 class="text-xl font-bold mb-4">Strategic Insights</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                    <div class="bg-green-100 p-4 rounded-lg"><p class="text-sm text-green-800">Fraud Savings (YTD)</p><p class="text-2xl font-bold text-green-900">$1.2M</p></div>
+                                    <div class="bg-blue-100 p-4 rounded-lg"><p class="text-sm text-blue-800">Automation Savings (YTD)</p><p class="text-2xl font-bold text-blue-900">$780K</p></div>
+                                    <div class="bg-sky-100 p-4 rounded-lg"><p class="text-sm text-sky-800">Total Estimated ROI</p><p class="text-2xl font-bold text-sky-900">450%</p></div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <h4 class="font-semibold mb-2">Fraud & Anomaly Heatmap</h4>
+                                        <div class="grid grid-cols-2 gap-2 text-white text-xs text-center border rounded-lg p-2">
+                                            <div class="p-4 rounded bg-green-500">West</div>
+                                            <div class="p-4 rounded bg-red-600">North-East</div>
+                                            <div class="p-4 rounded bg-yellow-500">Mid-West</div>
+                                            <div class="p-4 rounded bg-green-600">South</div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold mb-2">AI Early Warning System</h4>
+                                        <div id="early-warning-output" class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">
+                                            <div class="loader w-6 h-6"></div>
+                                        </div>
+                                        <button id="analyze-trends-btn" class="mt-2 text-xs bg-slate-600 text-white px-3 py-1 rounded hover:bg-slate-700">Analyze Failure Trends</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Dealer Portal -->
+                            <div id="dealer-content" class="sub-tab-content">
+                                <h3 class="text-xl font-bold mb-4">Dealer Claim Pre-Check</h3>
+                                <div class="max-w-xl mx-auto">
+                                    <div class="space-y-3">
+                                        <input id="dealer-vin" type="text" placeholder="Vehicle VIN" class="w-full p-2 border rounded">
+                                        <input id="dealer-part" type="text" placeholder="Part Number" class="w-full p-2 border rounded">
+                                        <textarea id="dealer-desc" placeholder="Problem Description" class="w-full p-2 border rounded" rows="3"></textarea>
+                                        <button id="dealer-precheck-btn" class="w-full bg-sky-600 text-white p-2 rounded hover:bg-sky-700 font-semibold">Pre-Check with AI</button>
+                                    </div>
+                                    <div id="dealer-precheck-result" class="mt-4 hidden"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            function attachAIWarrantyListeners() {
+                const claimsData = {
+                    1: { title: 'Claim #78A54 - Water Pump Failure', risk: 'Low', status: 'Pending', details: 'Vehicle: 2021 Pickup Truck<br>Mileage: 35,021 miles<br>Description: Customer reports coolant leak. Technician confirmed failed water pump bearing.', image: 'https://placehold.co/400x300/e2e8f0/475569?text=Leaking+Pump' },
+                    2: { title: 'Claim #78A55 - A/C Compressor', risk: 'High', status: 'Pending', details: 'Vehicle: 2022 SUV<br>Mileage: 18,543 miles<br>Description: A/C not blowing cold. Compressor clutch not engaging.', image: 'https://placehold.co/400x300/e2e8f0/475569?text=A/C+Compressor', suspiciousArea: { top: '40%', left: '55%', width: '30%', height: '20%' } },
+                    3: { title: 'Claim #78A56 - Radio Unit', risk: 'Medium', status: 'Pending', details: 'Vehicle: 2020 Sedan<br>Mileage: 48,112 miles (Warranty expires at 50k)<br>Description: Infotainment screen freezes intermittently.', image: 'https://placehold.co/400x300/e2e8f0/475569?text=Frozen+Screen' },
+                };
+
+                function renderClaimsQueue() {
+                    const queueDiv = document.getElementById('claims-list');
+                    if (!queueDiv) return;
+                    queueDiv.innerHTML = Object.entries(claimsData).map(([id, claim]) => {
+                        let riskColor = 'bg-green-500';
+                        if (claim.risk === 'Medium') riskColor = 'bg-yellow-500';
+                        if (claim.risk === 'High') riskColor = 'bg-red-500';
+                        return `
+                            <button class="claim-item w-full text-left p-2 rounded hover:bg-slate-100" data-claim-id="${id}">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold">${claim.title}</span>
+                                    <span class="text-xs text-white px-2 py-1 rounded-full ${riskColor}">${claim.risk}</span>
+                                </div>
+                                <p class="text-sm text-slate-500">${claim.status}</p>
+                            </button>
+                        `;
+                    }).join('');
+                }
+
+                function updateClaimDetails(claimId) {
+                    const claim = claimsData[claimId];
+                    document.getElementById('claim-details-view').classList.remove('hidden');
+                    document.getElementById('claim-empty-view').classList.add('hidden');
+                    
+                    document.getElementById('claim-title').innerText = claim.title;
+                    document.getElementById('claim-details').innerHTML = claim.details;
+                    const imageContainer = document.getElementById('claim-image-container');
+                    imageContainer.innerHTML = `<img src="${claim.image}" class="rounded-lg w-full h-auto object-cover"><div id="suspicious-box" class="absolute border-2 border-red-500 hidden"></div>`;
+                    
+                    document.getElementById('claim-analysis-result').classList.add('hidden');
+                    
+                    document.querySelectorAll('.claim-item').forEach(b => b.classList.remove('bg-slate-100', 'border-l-4', 'border-sky-500'));
+                    const activeBtn = document.querySelector(`.claim-item[data-claim-id='${claimId}']`);
+                    if(activeBtn) {
+                       activeBtn.classList.add('bg-slate-100', 'border-l-4', 'border-sky-500');
+                    }
+                }
+
+                document.getElementById('ai-warranty-adjudication-content').addEventListener('click', async e => {
+                    // Sub-tab navigation
+                    if (e.target.matches('.sub-nav-btn')) {
+                        const subTabId = e.target.dataset.subtab;
+                        document.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+                        document.getElementById(`${subTabId}-content`).classList.add('active');
+
+                        if (subTabId === 'dashboard') {
+                            const warningDiv = document.getElementById('early-warning-output');
+                            warningDiv.innerHTML = '<div class="loader w-6 h-6"></div>';
+                            const prompt = `Act as an AI analyst. Scan our entire warranty database and identify one emerging trend that could indicate a future recall or widespread issue. Present it as a concise warning.`;
+                            const response = await callGemini(prompt);
+                            warningDiv.innerHTML = `<p class="font-bold text-yellow-800">Emerging Trend Detected</p><p class="text-sm text-yellow-700">${response}</p>`;
+                        }
+                    }
+                    // Select a claim from the queue
+                    else if (e.target.closest('.claim-item')) {
+                        const claimId = e.target.closest('.claim-item').dataset.claimId;
+                        updateClaimDetails(claimId);
+                    }
+                    // Analyze the selected claim
+                    else if (e.target.id === 'analyze-claim') {
+                        const activeClaimItem = document.querySelector('.claim-item.border-sky-500');
+                        if (!activeClaimItem) return;
+
+                        const activeClaimId = activeClaimItem.dataset.claimId;
+                        const claim = claimsData[activeClaimId];
+                        const resultDiv = document.getElementById('claim-analysis-result');
+                        resultDiv.classList.remove('hidden');
+                        resultDiv.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
+
+                        const prompt = `Act as an AI warranty claim adjudicator. Analyze the following claim and return a JSON object with "recommendation" ("Approve", "Flag for Review", or "Deny"), "justification" (a brief explanation), "checks" (an array of strings for key findings), and "paymentAuthorized" (boolean). Claim details: ${JSON.stringify(claim)}`;
+
+                        const responseText = await callGemini(prompt, true);
+                        try {
+                            const response = JSON.parse(responseText);
+                            let bannerClass = 'bg-slate-100 text-slate-800';
+                            let icon = '❓';
+                            if (response.recommendation === 'Approve') { bannerClass = 'bg-green-100 text-green-800'; icon = '✅'; }
+                            if (response.recommendation === 'Flag for Review') { bannerClass = 'bg-yellow-100 text-yellow-800'; icon = '⚠️'; }
+                            if (response.recommendation === 'Deny') { bannerClass = 'bg-red-100 text-red-800'; icon = '❌'; }
+                            
+                            resultDiv.innerHTML = `
+                                <div class="p-4 rounded-lg ${bannerClass}">
+                                    <div class="flex justify-between items-center">
+                                        <p class="font-bold text-lg flex items-center gap-2"><span>${icon}</span>${response.recommendation}</p>
+                                        <button class="why-ai-btn text-xs hover:underline">Why?</button>
+                                    </div>
+                                    <div class="ai-justification text-sm mt-2 hidden">${response.justification}</div>
+                                </div>
+                                <div class="mt-4 space-y-2">
+                                    <h4 class="font-semibold">AI Verification Checks:</h4>
+                                    ${response.checks.map(check => `<p class="text-sm flex items-center gap-2"><span class="text-green-500">✓</span>${check}</p>`).join('')}
+                                    ${response.paymentAuthorized ? '<p class="text-sm flex items-center gap-2 font-bold text-green-600"><span class="text-green-500">✓</span>Instant Payment Authorized</p>' : ''}
+                                </div>
+                            `;
+                            if (claim.suspiciousArea) {
+                                const box = document.getElementById('suspicious-box');
+                                if(box) {
+                                    Object.assign(box.style, claim.suspiciousArea);
+                                    box.classList.remove('hidden');
+                                }
+                            }
+                            claimsData[activeClaimId].status = response.recommendation;
+                            renderClaimsQueue();
+                            // Keep the current claim selected
+                            document.querySelector(`.claim-item[data-claim-id='${activeClaimId}']`).classList.add('bg-slate-100', 'border-l-4', 'border-sky-500');
+
+
+                        } catch (e) {
+                            resultDiv.innerHTML = `<p class="text-red-500">Error parsing AI response. Please try again.</p>`;
+                        }
+                    }
+                    // Toggle "Why?" explanation
+                    else if (e.target.matches('.why-ai-btn')) {
+                        e.target.parentElement.nextElementSibling.classList.toggle('hidden');
+                    }
+                    // Dealer pre-check
+                    else if (e.target.id === 'dealer-precheck-btn') {
+                        const resultDiv = document.getElementById('dealer-precheck-result');
+                        resultDiv.classList.remove('hidden');
+                        resultDiv.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
+                        const prompt = `A dealer wants to pre-check a warranty claim. Details: VIN=${document.getElementById('dealer-vin').value}, Part=${document.getElementById('dealer-part').value}, Desc=${document.getElementById('dealer-desc').value}. Provide a JSON object with "likelihood" ("High", "Medium", "Low") and "feedback" (a concise tip for the dealer).`;
+                        const responseText = await callGemini(prompt, true);
+                        try {
+                            const response = JSON.parse(responseText);
+                            let bannerClass = 'bg-slate-100 text-slate-800';
+                            if (response.likelihood === 'High') bannerClass = 'bg-green-100 text-green-800';
+                            if (response.likelihood === 'Medium') bannerClass = 'bg-yellow-100 text-yellow-800';
+                            if (response.likelihood === 'Low') bannerClass = 'bg-red-100 text-red-800';
+                            resultDiv.innerHTML = `
+                                <div class="p-4 rounded-lg ${bannerClass}">
+                                    <p class="font-bold">Approval Likelihood: ${response.likelihood}</p>
+                                    <p class="text-sm mt-1"><strong>AI Feedback:</strong> ${response.feedback}</p>
+                                </div>
+                            `;
+                        } catch(e) {
+                            resultDiv.innerHTML = `<p class="text-red-500">Error parsing AI response. Please try again.</p>`;
+                        }
+                    }
+                    // Analyze Failure Trends
+                    else if (e.target.id === 'analyze-trends-btn') {
+                        const prompt = `Act as an AI root cause analysis expert for an automotive OEM. Analyze our entire warranty claim database for the "Water Pump Failure" claim. Identify the most probable root cause and present it as a concise engineering feedback report. Include a 'title', 'executiveSummary', 'failureAnalysis' (string), and 'recommendation' for the engineering team in a JSON object.`;
+                        openSimulationModal(prompt, true);
+                    }
+                });
+
+                renderClaimsQueue();
+                updateClaimDetails(1);
+            }
+
+            // --- DEMO 4: PROACTIVE RETENTION ---
+            function getProactiveRetentionHTML() {
+                return `
+                    <h2 class="text-2xl font-bold mb-4">Proactive Retention Command Center</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Left: Customer List -->
+                        <div class="lg:col-span-1 bg-white p-4 rounded-lg shadow-lg">
+                            <h3 class="font-bold mb-2">Customer Profiles</h3>
+                            <div id="customer-list" class="space-y-2"></div>
+                        </div>
+                        <!-- Middle: Engagement Center -->
+                        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-lg">
+                            <div id="retention-engagement-view"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            function attachProactiveRetentionListeners() {
+                const customers = {
+                    1: { name: 'Jane Doe', info: '<b>Vehicle:</b> 2022 SUV<br><b>Last Service:</b> 6 months ago (Oil Change)<br><b>Declined Service:</b> Cabin Air Filter', persona: 'Safety-First', churnRisk: 'Low' },
+                    2: { name: 'John Smith', info: '<b>Vehicle:</b> 2019 Sedan<br><b>Status:</b> Lapsed (18 months since last visit)', persona: 'Cost-Conscious', churnRisk: 'High' },
+                    3: { name: 'Sam Jones', info: '<b>Vehicle:</b> 2023 Performance Coupe<br><b>Last Service:</b> 2 months ago (Tire Rotation)', persona: 'Performance Enthusiast', churnRisk: 'Low', telemetry: 'Low Battery Voltage Detected' }
+                };
+
+                function renderCustomerList() {
+                    const listDiv = document.getElementById('customer-list');
+                    if (!listDiv) return;
+                    listDiv.innerHTML = Object.entries(customers).map(([id, customer]) => {
+                        let riskColor = 'bg-green-500';
+                        if (customer.churnRisk === 'Medium') riskColor = 'bg-yellow-500';
+                        if (customer.churnRisk === 'High') riskColor = 'bg-red-500';
+                        return `
+                            <button class="customer-item w-full text-left p-2 rounded hover:bg-slate-100" data-customer-id="${id}">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold">${customer.name}</span>
+                                    <span class="text-xs text-white px-2 py-1 rounded-full ${riskColor}">${customer.churnRisk} Risk</span>
+                                </div>
+                                <p class="text-sm text-slate-500">${customer.persona}</p>
+                                ${customer.telemetry ? `<p class="text-xs text-amber-600 font-semibold mt-1">⚠️ Telemetry Alert</p>` : ''}
+                            </button>
+                        `;
+                    }).join('');
+                }
+
+                function renderEngagementView(customerId) {
+                    const customer = customers[customerId];
+                    const container = document.getElementById('retention-engagement-view');
+                    if (!container) return;
+                    container.innerHTML = `
+                        <h3 class="text-xl font-bold">${customer.name}</h3>
+                        <div class="mt-4 text-sm space-y-1 text-slate-600">${customer.info}</div>
+                        <div id="ai-next-best-service" class="mt-4 p-4 rounded-lg bg-sky-50 border border-sky-200">
+                            <div class="flex justify-center items-center h-full"><div class="loader"></div></div>
+                        </div>
+                        <div class="mt-4 p-4 rounded-lg bg-gray-100 hidden" id="outreach-preview">
+                            <div id="chat-window" class="space-y-4"></div>
+                        </div>
+                    `;
+
+                    const prompt = `Act as an AI service advisor. For a customer with this profile: ${JSON.stringify(customer)}, determine the single "Next Best Service" to recommend. Return a JSON object with 'serviceName' and 'justification'. If there's a telemetry alert, prioritize it.`;
+                    callGemini(prompt, true).then(responseText => {
+                        try {
+                            const response = JSON.parse(responseText);
+                            document.getElementById('ai-next-best-service').innerHTML = `
+                                <p class="text-sm font-semibold text-sky-800">AI "Next Best Service" Prediction:</p>
+                                <p class="text-lg font-bold text-sky-900">${response.serviceName}</p>
+                                <p class="text-xs text-slate-500 mt-1">${response.justification}</p>
+                                <button id="generate-outreach" class="mt-2 w-full bg-sky-600 text-white p-2 rounded hover:bg-sky-700 font-semibold text-sm">Generate Personalized Outreach</button>
+                            `;
+                        } catch(e) {
+                            document.getElementById('ai-next-best-service').innerHTML = `<p class="text-red-500">Error generating prediction.</p>`;
+                        }
+                    });
+                }
+
+                document.getElementById('proactive-retention-content').addEventListener('click', async e => {
+                    if (e.target.closest('.customer-item')) {
+                        const customerId = e.target.closest('.customer-item').dataset.customerId;
+                        document.querySelectorAll('.customer-item').forEach(b => b.classList.remove('bg-slate-100', 'border-l-4', 'border-sky-500'));
+                        e.target.closest('.customer-item').classList.add('bg-slate-100', 'border-l-4', 'border-sky-500');
+                        renderEngagementView(customerId);
+                    }
+                    if (e.target.id === 'generate-outreach') {
+                        const activeCustomerItem = document.querySelector('.customer-item.border-sky-500');
+                        if (!activeCustomerItem) return;
+                        const activeCustomerId = activeCustomerItem.dataset.customerId;
+                        const customer = customers[activeCustomerId];
+                        const previewDiv = document.getElementById('outreach-preview');
+                        const chatWindow = document.getElementById('chat-window');
+                        previewDiv.classList.remove('hidden');
+                        chatWindow.innerHTML = '<div class="flex justify-center items-center h-full"><div class="loader"></div></div>';
+                        
+                        const prompt = `Act as a friendly, dealership service advisor. Write a personalized SMS message to a customer. The message should be tailored to their specific persona and context to maximize engagement. The goal is to get them to book a service appointment. Keep it under 160 characters. Context: ${JSON.stringify(customer)}`;
+                        
+                        const response = await callGemini(prompt);
+                        chatWindow.innerHTML = `
+                            <div class="flex justify-end">
+                                <div class="chat-bubble-user p-3 rounded-lg max-w-xs">${response}</div>
+                            </div>
+                            <div class="flex justify-start">
+                                 <div class="chat-bubble-ai p-3 rounded-lg max-w-xs">That sounds great. I've booked you for Thursday at 10am and added a complimentary loaner vehicle to your appointment. See you then!</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                renderCustomerList();
+                renderEngagementView(1); // Initial view
+                // Add active class to the first customer item on init
+                const firstCustomer = document.querySelector('#customer-list .customer-item');
+                if (firstCustomer) {
+                    firstCustomer.classList.add('bg-slate-100', 'border-l-4', 'border-sky-500');
+                }
+            }
+
+            // --- DEMO 5: KNOWLEDGE BASE ---
+            function getKnowledgeBaseHTML() {
+                return `
+                    <h2 class="text-2xl font-bold mb-4">Dynamic Knowledge Base</h2>
+                    <div class="bg-white p-6 rounded-lg shadow-lg max-w-6xl mx-auto">
+                        <div class="border-b border-slate-200 mb-4">
+                            <nav id="kb-sub-nav" class="flex space-x-4">
+                                <button data-subtab="kb-text" class="sub-nav-btn font-semibold text-slate-500 hover:text-sky-600 active">Text Search</button>
+                                <button data-subtab="kb-visual" class="sub-nav-btn font-semibold text-slate-500 hover:text-sky-600">Visual Search & AR</button>
+                                <button data-subtab="kb-vin" class="sub-nav-btn font-semibold text-slate-500 hover:text-sky-600">Proactive VIN Lookup</button>
+                            </nav>
+                        </div>
+                        
+                        <div id="kb-text-content" class="sub-tab-content active">
+                            <div class="relative">
+                                <input type="text" id="kb-query" placeholder="Ask a technical question..." class="w-full p-3 border rounded-lg pl-10">
+                                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                        </div>
+
+                        <div id="kb-visual-content" class="sub-tab-content">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="visual-part-select" class="block text-sm font-medium text-slate-700">Simulate Part Scan:</label>
+                                    <select id="visual-part-select" class="mt-1 block w-full p-2 border rounded-md">
+                                        <option value="alternator">Alternator Assembly</option>
+                                        <option value="abs">ABS Control Module</option>
+                                    </select>
+                                </div>
+                                <div class="relative" id="visual-image-container">
+                                    <img id="visual-part-image" src="https://placehold.co/400x300/e2e8f0/475569?text=Scan+a+Part" class="rounded-lg w-full">
+                                    <div id="ar-overlay" class="absolute top-0 left-0 w-full h-full hidden">
+                                        <div class="absolute border-2 border-dashed border-cyan-400 bg-cyan-500/20 rounded-full" style="top: 45%; left: 35%; width: 30%; height: 30%;"></div>
+                                        <p class="absolute text-white bg-black/50 text-xs p-1 rounded" style="top: 52%; left: 65%;">Pulley Nut</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="kb-vin-content" class="sub-tab-content">
+                            <div class="relative">
+                                <input type="text" id="vin-query" placeholder="Enter Vehicle VIN..." class="w-full p-3 border rounded-lg pr-24" value="1FTFW1E83KFA12345">
+                                <button id="vin-lookup-btn" class="absolute right-1 top-1/2 -translate-y-1/2 bg-sky-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-sky-700">Lookup</button>
+                            </div>
+                        </div>
+
+                        <div id="kb-answer" class="mt-4 min-h-[200px]">
+                            <p class="text-slate-500 text-center pt-8">Ask a question or perform a lookup to get started...</p>
+                        </div>
+                    </div>
+                `;
+            }
+            function attachKnowledgeBaseListeners() {
+                const kbContainer = document.getElementById('dynamic-knowledge-base-content');
+
+                kbContainer.addEventListener('click', async e => {
+                    if (e.target.matches('.sub-nav-btn')) {
+                        const subTabId = e.target.dataset.subtab;
+                        kbContainer.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        kbContainer.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+                        document.getElementById(`${subTabId}-content`).classList.add('active');
+                        document.getElementById('kb-answer').innerHTML = `<p class="text-slate-500 text-center pt-8">Ask a question or perform a lookup to get started...</p>`;
+                    }
+                    if(e.target.id === 'vin-lookup-btn') {
+                        const vin = document.getElementById('vin-query').value;
+                        const answerDiv = document.getElementById('kb-answer');
+                        answerDiv.innerHTML = '<div class="flex justify-center items-center h-full pt-8"><div class="loader"></div></div>';
+                        const prompt = `Act as a proactive AI assistant. A technician has looked up VIN ${vin}. Check for any outstanding recalls or critical TSBs for this vehicle model and present them as a "Heads-Up Display" in markdown format.`;
+                        const response = await callGemini(prompt);
+                        answerDiv.innerHTML = `<div class="p-4 rounded-lg bg-yellow-50 border-l-4 border-yellow-500 markdown-content">${marked.parse(response)}</div>`;
+                    }
+                    if(e.target.id === 'ar-view-btn') {
+                        document.getElementById('ar-overlay').classList.toggle('hidden');
+                    }
+                });
+
+                kbContainer.querySelector('#kb-query').addEventListener('keypress', async e => {
+                    if (e.key === 'Enter') {
+                        const query = e.target.value;
+                        if (!query) return;
+                        
+                        const answerDiv = document.getElementById('kb-answer');
+                        answerDiv.innerHTML = '<div class="flex justify-center items-center h-full pt-8"><div class="loader"></div></div>';
+
+                        const prompt = `Act as an expert OEM technical knowledge base. Provide a clear, accurate, and step-by-step answer to the following technician's query: "${query}". Format the response as a JSON object with keys: 'title', 'procedure' (in markdown), 'relatedTSB' (string, or null), 'parts' (an array of objects with 'partNumber' and 'name'), and 'tools' (an array of strings).`;
+                        
+                        const responseText = await callGemini(prompt, true);
+                        try {
+                            const response = JSON.parse(responseText);
+                            answerDiv.innerHTML = `
+                                <div class="p-4 rounded-lg bg-slate-50 border">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <h3 class="text-lg font-bold">${response.title}</h3>
+                                            ${response.relatedTSB ? `<span class="text-xs bg-yellow-200 text-yellow-800 font-medium px-2 py-0.5 rounded">TSB: ${response.relatedTSB}</span>` : ''}
+                                        </div>
+                                        <div class="flex items-center gap-2 text-slate-500">
+                                            <span class="text-xs font-semibold">Helpful?</span>
+                                            <button class="hover:text-green-500">👍</button>
+                                            <button class="hover:text-red-500">👎</button>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 markdown-content">${marked.parse(response.procedure)}</div>
+                                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="bg-white p-3 rounded-md border">
+                                            <h4 class="font-semibold text-sm mb-2">Required Parts & Tools</h4>
+                                            <ul class="text-xs space-y-1">
+                                                ${response.parts.map(p => `<li><span class="font-mono bg-gray-200 px-1 rounded">${p.partNumber}</span> - ${p.name}</li>`).join('')}
+                                                ${response.tools.map(t => `<li><span class="font-mono bg-gray-200 px-1 rounded">TOOL</span> - ${t}</li>`).join('')}
+                                            </ul>
+                                            <button class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mt-2">Check Stock</button>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-md border">
+                                             <h4 class="font-semibold text-sm mb-2">Community Insights</h4>
+                                             <div class="text-xs space-y-2">
+                                                <p class="p-2 bg-green-50 rounded-md border border-green-200"><span class="font-bold">✅ Community Verified Fix:</span> 125 Technicians found this helpful.</p>
+                                                <p class="p-2 bg-slate-100 rounded-md"><strong>TechTip from @J.Miller:</strong> "Make sure to disconnect the battery first! The main harness is tricky to get to otherwise."</p>
+                                                ${response.relatedTSB ? `<button class="text-xs bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 mt-2">Create Warranty Claim from TSB</button>` : ''}
+                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } catch(e) {
+                            answerDiv.innerHTML = `<div class="p-4 rounded-lg bg-red-50 border text-red-700">Error processing AI response. Please try again.</div>`;
+                        }
+                    }
+                });
+
+                kbContainer.querySelector('#visual-part-select').addEventListener('change', async e => {
+                    const partName = e.target.value;
+                    const answerDiv = document.getElementById('kb-answer');
+                    const imageEl = document.getElementById('visual-part-image');
+                    imageEl.src = `https://placehold.co/400x300/e2e8f0/475569?text=${partName.replace(/\s/g, '+')}`;
+                    document.getElementById('ar-overlay').classList.add('hidden');
+
+                    answerDiv.innerHTML = '<div class="flex justify-center items-center h-full pt-8"><div class="loader"></div></div>';
+                    const prompt = `Act as a visual search AI. A technician has scanned a part identified as "${partName}". Provide a JSON object with 'title', 'procedure' (in markdown), 'relatedTSB' (string, or null), 'parts' (an array of objects with 'partNumber' and 'name'), and 'tools' (an array of strings) for the standard replacement procedure.`;
+                    const responseText = await callGemini(prompt, true);
+                    try {
+                        const response = JSON.parse(responseText);
+                        answerDiv.innerHTML = `
+                            <div class="p-4 rounded-lg bg-slate-50 border">
+                                <div class="flex justify-between items-start">
+                                    <h3 class="text-lg font-bold">${response.title}</h3>
+                                    <div class="flex gap-2">
+                                        <button class="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Generate Video</button>
+                                        <button id="ar-view-btn" class="text-sm bg-cyan-500 text-white px-3 py-1 rounded hover:bg-cyan-600">Live Assist (AR)</button>
+                                    </div>
+                                </div>
+                                <div class="mt-4 markdown-content">${marked.parse(response.procedure)}</div>
+                            </div>
+                        `;
+                    } catch(e) {
+                        answerDiv.innerHTML = `<div class="p-4 rounded-lg bg-red-50 border text-red-700">Error processing AI response. Please try again.</div>`;
+                    }
+                });
+            }
+
+            // --- STRATEGIC REPORT ---
+            function getStrategicReportHTML() {
+                return `
+                    <div class="bg-white p-6 md:p-10 rounded-lg shadow-lg max-w-5xl mx-auto report-content">
+                        <h1>Digital Transformation in Automotive Aftersales: High-Value SaaS and AI Opportunities for OEMs</h1>
+                        <h3>Executive Summary</h3>
+                        <p>The automotive aftersales market, a substantial and highly profitable sector projected to surpass $500 billion in the U.S. alone by 2028, represents a critical battleground for Original Equipment Manufacturers (OEMs).[1] It is no longer merely a source of post-sale revenue but a primary driver of customer loyalty, brand perception, and long-term profitability.[2, 3] However, this lucrative domain is under immense pressure. OEMs are facing intensifying competition from a nimble and cost-effective Independent Aftermarket (IAM), which is steadily eroding the market share of franchised dealer networks.[1, 3] The core of this challenge lies in systemic, deeply entrenched inefficiencies within the traditional aftersales value chain.</p>
+                        <p>This report provides a comprehensive analysis of the automotive aftersales landscape, identifying four interconnected areas of systemic weakness: pervasive data fragmentation across siloed systems; operational friction rooted in manual, disjointed processes; a widening skills gap among technicians struggling to keep pace with vehicle complexity; and a customer experience that consistently falls short of modern digital expectations.[4, 5, 6] These pain points create a vicious cycle where poor data leads to inefficient operations, which in turn results in a frustrating customer experience, ultimately driving vehicle owners toward the IAM.</p>
+                        <p>The opportunity for digital intervention is therefore immense. This report details five high-potential, scalable Software-as-a-Service (SaaS) and Artificial Intelligence (AI) Agent use cases specifically designed for KPIT to offer its OEM clients. Crucially, these solutions are architected to be largely independent of proprietary OEM engineering data, ensuring broad applicability and faster market entry. The proposed solutions are:</p>
+                        <ol>
+                            <li><strong>The Universal Diagnostic Co-Pilot:</strong> An AI agent that improves First-Time Fix Rates (FTFR) and technician productivity by guiding them through complex diagnostics.</li>
+                            <li><strong>Predictive Parts Demand & Inventory Optimization Platform:</strong> A SaaS tool that increases parts sales and reduces carrying costs by using AI to forecast demand and optimize dealership inventory.</li>
+                            <li><strong>AI-Powered Warranty Adjudication & Fraud Detection Engine:</strong> A solution that dramatically reduces warranty costs and processing times by automating claim validation and identifying fraudulent activity.</li>
+                            <li><strong>Proactive Customer Service & Retention AI:</strong> A conversational AI agent that drives service revenue and boosts customer loyalty through automated, personalized outreach and appointment scheduling.</li>
+                            <li><strong>Dynamic Technical Knowledge Base & Triage System:</strong> A SaaS platform that ensures repair consistency and quality by creating a single, searchable source of truth for all technical information.</li>
+                        </ol>
+                        <p>By focusing on these systemic, data-agnostic challenges, KPIT can position itself as a strategic partner, providing OEMs with an integrated suite of digital tools. These tools will not only help them defend their profitable aftersales business but also empower them to compete and win on the new battlefields of efficiency, intelligence, and customer experience.</p>
+                        
+                        <h2>Section 1: The Automotive Aftersales Value Chain: A Landscape of Fragmented Opportunity</h2>
+                        <p>To identify high-value digital solutions, it is imperative to first understand the complex, and often contentious, ecosystem in which they must operate. The automotive aftersales value chain is not a simple, linear progression but a complex web of actors with differing, and frequently competing, interests.[7] Success in this domain requires navigating this intricate landscape to deliver value that resonates not only with the direct customer—the OEM—but with the entire network responsible for serving the end-consumer.</p>
+                        
+                        <h3>1.1. Mapping the Ecosystem: A Complex Web of Actors and Interests</h3>
+                        <p>The journey of a vehicle part from production to installation involves a multitude of specialized players, each fulfilling a critical role. The smooth functioning of this chain is essential for keeping vehicles on the road and maintaining a competitive service offering.[7, 8] The primary actors in this ecosystem include:</p>
+                        <ul>
+                            <li><strong>Original Equipment Manufacturers (OEMs):</strong> At the top of the value chain, OEMs are responsible for vehicle design, manufacturing, and brand management. In the aftersales context, their objectives are multifaceted: driving sales of high-margin original equipment (OE) parts, ensuring the profitability and viability of their franchised dealer networks, and maintaining a positive brand experience throughout the vehicle lifecycle to foster loyalty and repeat purchases.[3, 9]</li>
+                            <li><strong>Original Equipment Suppliers (OES):</strong> These are the component manufacturers that produce parts for OEMs. Critically, many OESs supply the exact same parts to both the OEM's official channel and the independent aftermarket, often under different branding.[7] This dual-channel strategy creates an inherent tension and competitive dynamic within the parts market.</li>
+                            <li><strong>Franchised Dealers and Workshops:</strong> As the public face of the OEM's aftersales service, franchised dealers are the primary touchpoint for customers seeking warranty work, recalls, and brand-certified repairs.[2, 8] Their success is heavily tied to operational efficiency, technician productivity, and their ability to retain customers beyond the warranty period. A key metric for their financial health is the "aftersales absorption ratio," which measures how much of the dealership's fixed costs are covered by the profits from the service and parts departments.[10]</li>
+                            <li><strong>Parts Distributors (Wholesalers):</strong> These entities are the logistical linchpin of the aftermarket. They manage vast assortments of parts from various manufacturers (both OE and independent) and specialize in the complex logistics of getting "the right part – for the right price – at the right time" to workshops.[7] Their customers include both franchised dealers and independent repair shops, making them a central hub in the flow of components.</li>
+                            <li><strong>The Independent Aftermarket (IAM):</strong> This is a broad and formidable category that represents the primary competition for the OEM's franchised network. The IAM includes a diverse range of players: generalist independent workshops, specialized repairers (e.g., body shops, transmission specialists), large multi-brand service chains, and burgeoning online e-commerce platforms for parts.[7, 11] Their primary competitive advantages are often lower costs and greater convenience for the consumer.[12]</li>
+                            <li><strong>End-Customers (Vehicle Owners & Fleet Operators):</strong> At the end of the chain, the consumer holds the ultimate power. Whether an individual car owner or a commercial fleet manager, their decisions are increasingly driven by a desire for convenience, cost-effectiveness, transparency, and a positive service experience.[13, 14] Their choice between the franchised dealer and the IAM determines the flow of revenue and market share.[7]</li>
+                        </ul>
+
+                        <h3>1.2. The Competing Channels: OEM Network vs. The Independent Aftermarket (IAM)</h3>
+                        <p>The structure of the aftersales ecosystem creates two fundamentally competing channels for vehicle repair and maintenance.[7] This competition is not a peripheral concern; it is the central strategic challenge that OEMs face in the aftersales domain. The battle for market share is fierce, and recent trends indicate that the OEM channel is losing ground.</p>
+                        <p>Analysis shows that the dealer channel has lost 1.4 percentage points of market share to the service channel (primarily the IAM) since 2017.[1] This erosion of a highly profitable business line is a significant threat to OEMs.[3] The IAM's appeal is particularly strong for vehicles outside of their warranty period, where customers are less tied to the dealership and more sensitive to price. Nearly 40% of auto buyers state they prefer general repair shops because they perceive them as more convenient.[12]</p>
+                        <p>OEMs are not passive in this battle. They are actively deploying strategies to reclaim lost customers and revenue. Prominent examples include the creation of OEM-backed, multi-brand "fast-fit" service chains like Volkswagen's Stop&Go and Renault Minute, which are designed to compete directly with the IAM on speed and convenience for common maintenance tasks.[3] Other strategies involve launching second-tier parts brands that offer a more cost-effective alternative to premium OE parts, targeting the owners of older vehicles.[3] The existence of these strategies underscores the OEM's recognition of the IAM threat and their willingness to invest in innovative models to defend their aftersales business.</p>
+                        <p>This competitive context is crucial. A digital tool or SaaS platform sold to an OEM cannot be evaluated solely on its ability to improve an internal process in isolation. Its ultimate value lies in its ability to arm the OEM's franchised network with a competitive advantage against the IAM. The goal is to help dealers win the business of the end-customer by offering a superior value proposition that transcends price alone.</p>
+                        
+                        <h3>1.3. Core Functional Pillars of Aftersales</h3>
+                        <p>To structure the analysis of opportunities, the aftersales domain can be broken down into four core functional pillars. These pillars represent the primary business activities where value is created, costs are incurred, and customer experiences are shaped. Systemic pain points and, consequently, opportunities for digital solutions, are found within and between these pillars.</p>
+                        <ul>
+                            <li><strong>Service & Repair:</strong> This is the hands-on execution of vehicle maintenance and repair. It encompasses the entire workflow from the moment a customer schedules an appointment to the final quality check. Key sub-functions include vehicle diagnosis, the repair process itself, technician management, and workshop scheduling.[8, 9]</li>
+                            <li><strong>Parts Management:</strong> This pillar covers the entire lifecycle of spare parts. It is a complex logistical function that includes demand forecasting, procurement from suppliers, inventory management across multiple locations (warehouses and dealerships), distribution, and handling of returns and obsolete stock.[7, 15, 16]</li>
+                            <li><strong>Warranty Management:</strong> This function deals with the administration of OEM warranties. It involves processing claims submitted by dealers, validating their legitimacy, managing the financial reimbursement process, handling recalls, and recovering costs from the OESs responsible for faulty components.[2, 17]</li>
+                            <li><strong>Customer Relationship Management (CRM) & Engagement:</strong> This pillar includes all customer-facing interactions and relationship-building activities. It begins with initial appointment scheduling and continues through service status updates, post-service follow-ups, feedback collection, and targeted marketing campaigns designed to encourage retention and loyalty.[2, 14]</li>
+                        </ul>
+
+                        <h3>Table 1: The Aftersales Value Chain: Actors, Functions, and Key Challenges</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Value Chain Actor</th><th>Primary Function/Role</th><th>Key Objectives</th><th>Primary Challenges & Pressures</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Original Equipment Manufacturer (OEM)</strong></td><td>Brand Management, Parts Supply, Network Oversight</td><td>Increase high-margin parts sales, grow service revenue, maintain brand loyalty, ensure dealer profitability.[3, 9]</td><td>Intense competition from IAM, managing global supply chain complexity, ensuring consistent service quality across the network, reducing warranty costs.[3, 5]</td></tr>
+                                <tr><td><strong>Franchised Dealer/Workshop</strong></td><td>Vehicle Repair, Maintenance, Warranty Service</td><td>Maximize service absorption ratio, improve technician productivity, increase customer retention, achieve high Customer Satisfaction Index (CSI) scores.[2, 10]</td><td>Competition from local IAM on price and convenience, technician skills gap with new vehicle tech, managing cash flow from slow warranty reimbursements, operational inefficiencies.[4, 12, 18]</td></tr>
+                                <tr><td><strong>Independent Aftermarket (IAM)</strong></td><td>Cost-Effective Service Alternative</td><td>Capture post-warranty customers, offer convenience and speed, build local customer relationships, maintain profitability with lower overhead.[3, 7]</td><td>Access to technical information and diagnostic tools, competing with OEM brand trust, sourcing quality parts at competitive prices, managing a diverse range of vehicle brands.[7, 19]</td></tr>
+                                <tr><td><strong>Parts Distributor</strong></td><td>Logistics & Product Assortment</td><td>Achieve "just-in-time" delivery, manage a wide variety of SKUs, maintain strong supplier and customer relationships, optimize logistics for efficiency.[7]</td><td>Supply chain disruptions, managing inventory carrying costs, pressure on margins from online e-commerce players, complex logistics of same-day delivery.[11, 20]</td></tr>
+                                <tr><td><strong>End-Customer (Owner/Fleet)</strong></td><td>Vehicle Usage & Maintenance</td><td>Minimize total cost of ownership, ensure vehicle safety and reliability, receive convenient and transparent service, feel valued by the service provider.[2, 14]</td><td>High repair costs at dealerships, lack of transparency in pricing and service process, inconvenience of workshop visits, finding a trustworthy service provider.[2, 12, 21]</td></tr>
+                            </tbody>
+                        </table>
+                        
+                        <h2>Section 2: Systemic Pain Points and Latent Needs in the Aftersales Ecosystem</h2>
+                        <p>The automotive aftersales ecosystem, for all its economic significance, is plagued by deep-seated, systemic inefficiencies. These are not isolated problems affecting a single actor but are interconnected issues that create friction throughout the value chain. They represent a significant drag on profitability, a barrier to technician effectiveness, and a major source of customer dissatisfaction. Understanding these core pain points is the first step in designing digital solutions that offer genuine, scalable value. The challenges can be categorized into four primary domains: data disconnects, operational inefficiencies, a growing skills gap, and a deficient customer experience.</p>
+                        
+                        <h3>2.1. The Data Disconnect: Silos, Inaccuracy, and the Elusive Single Source of Truth</h3>
+                        <p>The foundational problem underpinning many of the aftersales sector's woes is the state of its data. Information is fragmented, inconsistent, and siloed across a multitude of disconnected systems. An OEM may have customer data in a central CRM, while the dealer has service history in a Dealer Management System (DMS), and parts information resides in a separate Enterprise Resource Planning (ERP) system.[6] This lack of a single, trusted source of truth creates a cascade of problems that impact every facet of the aftersales operation.[5, 6]</p>
+                        
+                        <h3>2.2. Operational Inefficiency: The High Cost of Manual and Disjointed Processes</h3>
+                        <p>The fragmented data landscape directly contributes to widespread operational inefficiency. Many aftersales processes remain heavily reliant on manual data entry, paper-based workflows, or legacy software systems that lack modern integration capabilities. This creates significant friction, drives up costs, and slows down the entire service delivery process.</p>
+                        
+                        <h3>2.3. The Evolving Technician: Bridging the Skills Gap</h3>
+                        <p>The modern vehicle is a "computer on wheels," and its complexity is increasing at an exponential rate. The rise of alternative powertrains—including Battery Electric Vehicles (BEVs) and hybrids—along with the proliferation of Advanced Driver-Assistance Systems (ADAS) has created a significant and widening skills gap among service technicians.[13, 26]</p>
+                        
+                        <h3>2.4. The Customer Experience Deficit: Falling Short of Modern Expectations</h3>
+                        <p>The final, and perhaps most critical, pain point is the quality of the customer experience itself. In an age of on-demand services and seamless digital interactions, the traditional automotive aftersales experience often feels antiquated and frustrating. It frequently fails to meet modern consumer expectations for convenience, transparency, and personalization, creating a significant vulnerability that the IAM is quick to exploit.[2, 14]</p>
+                        
+                        <h2>Section 3: High-Potential SaaS & AI Use Cases for OEM Aftersales</h2>
+                        <p>Addressing the systemic pain points of the aftersales ecosystem requires a portfolio of targeted, intelligent, and scalable digital solutions. The following five use cases have been developed to directly tackle the challenges of data disconnects, operational inefficiency, the technician skills gap, and the customer experience deficit. Critically, they are designed with a focus on data agnosticism, ensuring they can be deployed broadly across different OEM brands without heavy reliance on proprietary engineering data. This approach maximizes the potential market and minimizes implementation friction.</p>
+                        
+                        <h3>3.1. Use Case 1: The Universal Diagnostic Co-Pilot (AI Agent)</h3>
+                        <p><strong>Concept:</strong> An AI-powered agent, delivered as a SaaS application on a workshop tablet or mobile device, that functions as an intelligent, interactive co-pilot for service technicians. It guides them through the entire diagnostic process, from symptom to solution, dramatically improving accuracy and speed.</p>
+                        
+                        <h3>3.2. Use Case 2: Predictive Parts Demand & Inventory Optimization Platform (SaaS)</h3>
+                        <p><strong>Concept:</strong> A cloud-based SaaS platform that uses AI and machine learning to provide intelligent demand forecasting and inventory management recommendations to OEM dealership parts departments. It moves parts management from a reactive to a proactive model.</p>
+                        
+                        <h3>3.3. Use Case 3: AI-Powered Warranty Adjudication & Fraud Detection Engine (SaaS/AI Agent)</h3>
+                        <p><strong>Concept:</strong> A SaaS platform with an integrated AI agent that automates the initial review, validation, and triage of incoming warranty claims. It is designed to fast-track legitimate claims while flagging suspicious or non-compliant claims for human review.</p>
+                        
+                        <h3>3.4. Use Case 4: Proactive Customer Service & Retention AI (AI Agent)</h3>
+                        <p><strong>Concept:</strong> A conversational AI agent that integrates with dealership CRM and DMS systems to automate personalized customer communications throughout the vehicle ownership lifecycle. Its goal is to drive service appointments, build loyalty, and prevent customer defection to the IAM.</p>
+                        
+                        <h3>3.5. Use Case 5: Dynamic Technical Knowledge Base & Triage System (SaaS)</h3>
+                        <p><strong>Concept:</strong> A centralized, cloud-based knowledge management platform that acts as the single source of truth for all OEM technical and service information. It combines a powerful, AI-driven search functionality with a structured triage system for escalating unsolvable problems.</p>
+                        
+                        <h2>Section 4: Strategic Implementation and Go-to-Market Recommendations</h2>
+                        <p>Developing innovative SaaS and AI solutions is only half the battle. To ensure commercial success, KPIT must adopt a strategic approach to implementation, competitive positioning, and market entry. The following recommendations are designed to maximize the adoption and impact of the proposed aftersales portfolio.</p>
+                        
+                        <h3>4.1. The Technology Imperative: API-First and DMS Integration</h3>
+                        <p>The single most critical technical success factor for any aftersales software is its ability to integrate seamlessly into the existing dealership technology stack. These solutions cannot operate in isolated silos; they must be able to both consume and provide data to the systems that run the dealership. Failure to prioritize integration will result in a product that creates more manual work than it automates, dooming it to failure.</p>
+                        
+                        <h3>4.2. Competitive Landscape and Differentiation</h3>
+                        <p>The automotive aftersales technology market is active and contains a mix of established giants and innovative startups. KPIT must position its offerings strategically to highlight a unique and compelling value proposition. The key is to move beyond selling individual point solutions and instead offer an integrated platform that solves the systemic problem of fragmentation.</p>
+                        
+                        <h3>4.3. Go-to-Market (GTM) Strategy: Land and Expand</h3>
+                        <p>Selling a full, integrated platform to a large OEM can be a long and complex sales cycle. A more effective approach is a "Land and Expand" strategy, which focuses on securing an initial foothold with a high-impact solution and then growing the relationship over time.</p>
+                        
+                        <h2>Conclusion</h2>
+                        <p>The automotive aftersales sector is at a pivotal juncture. Once a reliable, behind-the-scenes profit center, it has now become a primary arena for competition and a crucial determinant of long-term customer loyalty. OEMs face a formidable challenge from the agile and cost-effective Independent Aftermarket, which is steadily chipping away at the franchised network's market share.[1, 3] The traditional sources of competitive advantage are no longer sufficient. The future of aftersales will be defined not by mechanical prowess alone, but by digital acumen. The battle will be fought and won on the fields of data-driven efficiency, operational intelligence, and a seamlessly convenient customer experience.</p>
+                    </div>
+                `;
+            }
+
+            // --- INITIALIZE ALL DEMOS ---
+            initializeDemos();
+        });
+    </script>
+</body>
+</html>
